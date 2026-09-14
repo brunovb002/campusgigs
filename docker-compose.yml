@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: campusgigs-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: campusgigs
+      POSTGRES_USER: campusgigs
+      POSTGRES_PASSWORD: campusgigs
+    ports:
+      - "5432:5432"
+    volumes:
+      - campusgigs-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campusgigs"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    container_name: campusgigs-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: campusgigs
+      DB_USER: campusgigs
+      DB_PASSWORD: campusgigs
+    ports:
+      - "8080:8080"
+
+volumes:
+  campusgigs-db-data:
