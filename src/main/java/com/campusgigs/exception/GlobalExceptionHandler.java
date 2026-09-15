@@ -44,6 +44,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(corpoErro(HttpStatus.CONFLICT, ex.getMessage()));
     }
 
+    // CEP com formato válido mas que o ViaCEP não reconhece — a operação inteira
+    // (cadastro ou atualização) é recusada, nunca fica cidade/uf incompleto.
+    @ExceptionHandler(CepNaoEncontradoException.class)
+    public ResponseEntity<Map<String, Object>> handleCepNaoEncontrado(CepNaoEncontradoException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(corpoErro(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage()));
+    }
+
+    // Serviço externo de CEP fora do ar, lento (timeout) ou com erro inesperado.
+    @ExceptionHandler(CepIndisponivelException.class)
+    public ResponseEntity<Map<String, Object>> handleCepIndisponivel(CepIndisponivelException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(corpoErro(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidacao(MethodArgumentNotValidException ex) {
         Map<String, String> campos = new LinkedHashMap<>();

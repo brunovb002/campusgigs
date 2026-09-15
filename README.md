@@ -115,6 +115,37 @@ curl -X POST http://localhost:8080/servicos/1/contratar -H "Authorization: Beare
 curl -X POST http://localhost:8080/servicos/1/encerrar -H "Authorization: Bearer <token>"
 ```
 
+### 5. CEP automático (HttpExchange + ViaCEP)
+
+No cadastro (`POST /auth/cadastro`), `cidade` e `uf` são preenchidos automaticamente a partir do `cep` informado,
+consultando o [ViaCEP](https://viacep.com.br) por um cliente HTTP declarativo (Spring HttpExchange). Se o CEP não
+existir, o cadastro inteiro é recusado — nunca fica um usuário salvo com endereço incompleto.
+
+```bash
+curl -X POST http://localhost:8080/auth/cadastro \
+  -H "Content-Type: application/json" \
+  -d '{"nome": "Ana Souza", "email": "ana@universidade.edu", "senha": "senha123", "cep": "01310-100"}'
+# -> cidade: "São Paulo", uf: "SP"
+```
+
+Também dá pra atualizar o CEP de um usuário já cadastrado (autenticado, só o próprio):
+
+```bash
+curl -X PATCH http://localhost:8080/usuarios/me/cep \
+  -H "Content-Type: application/json" -H "Authorization: Bearer <token>" \
+  -d '{"cep": "20040-020"}'
+```
+
+Um CEP com formato válido mas inexistente responde `422 Unprocessable Entity`. Se o serviço externo estiver fora do
+ar ou muito lento, a API responde `503 Service Unavailable` em vez de travar ou salvar dado incompleto — a base URL
+e o timeout do ViaCEP são configuráveis por variável de ambiente (`CEP_BASE_URL`, `CEP_TIMEOUT_MS`), o que permite
+simular essa falha sem depender da internet cair de verdade:
+
+```bash
+# Sobe a API apontando pro CEP_BASE_URL inválido, pra simular o serviço externo fora do ar
+CEP_BASE_URL=http://host-que-nao-existe.invalid:9999 CEP_TIMEOUT_MS=2000 docker compose up -d --build
+```
+
 ## Evidências de teste manual
 
 Ver histórico de commits para a justificativa de cada checkpoint. Todos os testes abaixo foram rodados manualmente

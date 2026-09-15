@@ -30,6 +30,9 @@ services:
       DB_NAME: campusgigs
       DB_USER: campusgigs
       DB_PASSWORD: campusgigs
+      # Permite sobrescrever de fora (ex.: CEP_BASE_URL=http://host-inexistente:9999
+      # docker compose up) para simular o serviço externo de CEP fora do ar.
+      CEP_BASE_URL: ${CEP_BASE_URL:-https://viacep.com.br/ws}
     ports:
       - "8080:8080"
 

@@ -25,8 +25,13 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
-# Será usado a partir do CP3 (emissão/validação de JWT)
 app:
   jwt:
     secret: ${JWT_SECRET:troque-este-segredo-antes-de-ir-pra-producao}
     expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+
+  # Cliente HttpExchange do CP5 — base-url/timeout configuráveis para dar pra
+  # simular o serviço externo fora do ar/lento em teste manual (ver README).
+  cep:
+    base-url: ${CEP_BASE_URL:https://viacep.com.br/ws}
+    timeout-ms: ${CEP_TIMEOUT_MS:3000}
