@@ -191,3 +191,17 @@ administrativa fora da API pública).
 Os testes 3, 4 e 10 são os casos de **acesso negado por papel** exigidos na entrega: um USER sem relação com o
 serviço não pode alterá-lo de forma alguma, e mesmo um ADMIN — que tem uma exceção explícita para encerrar qualquer
 serviço (teste 9) — não tem essa mesma exceção para editar (teste 10).
+
+### CP5 — integração HttpExchange com o serviço externo de CEP
+
+| # | Teste | Esperado | Print |
+|---|-------|----------|-------|
+| 1 | Cadastro com CEP válido | 201 Created — `cidade`/`uf` preenchidos automaticamente | [cp5-01-cadastro-cep-valido.png](Evidencias/cp5-01-cadastro-cep-valido.png) |
+| 2 | Cadastro com CEP de formato válido, mas inexistente | 422 Unprocessable Entity — cadastro recusado | [cp5-02-cadastro-cep-inexistente.png](Evidencias/cp5-02-cadastro-cep-inexistente.png) |
+| 3 | `PATCH /usuarios/me/cep` (autenticado) | 200 OK — `cidade`/`uf` atualizados | [cp5-03-atualizar-cep-sucesso.png](Evidencias/cp5-03-atualizar-cep-sucesso.png) |
+| 4 | `PATCH /usuarios/me/cep` sem token | 401 Unauthorized | [cp5-04-atualizar-cep-sem-token.png](Evidencias/cp5-04-atualizar-cep-sem-token.png) |
+| 5 | **Serviço externo de CEP indisponível** (`CEP_BASE_URL` apontando pra um host inexistente) | **503 Service Unavailable** — nada fica salvo pela metade | [cp5-05-cep-servico-indisponivel.png](Evidencias/cp5-05-cep-servico-indisponivel.png) |
+
+O teste 5 é o caso que o enunciado pede pra entender explicitamente: quando o serviço externo falha ou demora, a API
+não trava nem deixa o cadastro incompleto — recusa a operação inteira com um erro claro (`503`), e nenhum usuário é
+persistido nesse cenário (conferido direto no banco durante o desenvolvimento).
