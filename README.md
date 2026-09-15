@@ -117,53 +117,46 @@ curl -X POST http://localhost:8080/servicos/1/encerrar -H "Authorization: Bearer
 
 ## Evidências de teste manual
 
-Ver histórico de commits para a justificativa de cada checkpoint.
+Ver histórico de commits para a justificativa de cada checkpoint. Todos os testes abaixo foram rodados manualmente
+via `curl`, contra a aplicação de pé em Docker (`docker compose up -d --build`), com os prints em [`Evidencias/`](Evidencias).
 
 ### CP2 — cadastro e autenticação
 
-```
-1) Cadastro (POST /auth/cadastro)                         -> 201 Created
-2) GET /auth/me sem credenciais                            -> 401 Unauthorized  (acesso negado)
-3) GET /auth/me com email+senha corretos (HTTP Basic)       -> 200 OK
-4) GET /auth/me com senha errada                            -> 401 Unauthorized  (acesso negado)
-5) POST /auth/cadastro com email já usado                   -> 409 Conflict
-6) POST /auth/cadastro com dados inválidos (nome/email/senha/cep) -> 400 Bad Request
-```
-
-Senha conferida diretamente no banco: armazenada como hash BCrypt (`$2a$10$...`), nunca em texto puro.
+| # | Teste | Esperado | Print |
+|---|-------|----------|-------|
+| 1 | Cadastro (`POST /auth/cadastro`) | 201 Created | [cp2-01-cadastro-sucesso.png](Evidencias/cp2-01-cadastro-sucesso.png) |
+| 2 | Cadastro com email já usado | 409 Conflict | [cp2-02-cadastro-email-duplicado.png](Evidencias/cp2-02-cadastro-email-duplicado.png) |
+| 3 | Cadastro com dados inválidos (nome/email/senha/cep) | 400 Bad Request | [cp2-03-cadastro-dados-invalidos.png](Evidencias/cp2-03-cadastro-dados-invalidos.png) |
+| 4 | Senha conferida direto no banco (`SELECT ... FROM usuarios`) | hash BCrypt (`$2a$10$...`), nunca texto puro | [cp2-04-senha-hash-bcrypt.png](Evidencias/cp2-04-senha-hash-bcrypt.png) |
 
 ### CP3 — emissão e validação de JWT
 
-```
-1) Cadastro (POST /auth/cadastro)                     -> 201 Created
-2) POST /auth/login com credenciais corretas           -> 200 OK + token JWT
-3) POST /auth/login com senha errada                   -> 401 Unauthorized
-4) POST /auth/login com email inexistente              -> 401 Unauthorized (mesma mensagem genérica)
-5) GET /auth/me com token válido                       -> 200 OK
-6) GET /auth/me sem token                              -> 401 Unauthorized (acesso negado)
-7) GET /auth/me com token adulterado                   -> 401 Unauthorized (acesso negado)
-8) GET /auth/me com header sem o prefixo "Bearer "     -> 401 Unauthorized (acesso negado)
-```
+| # | Teste | Esperado | Print |
+|---|-------|----------|-------|
+| 1 | `POST /auth/login` com credenciais corretas | 200 OK + token JWT | [cp3-01-login-sucesso.png](Evidencias/cp3-01-login-sucesso.png) |
+| 2 | `POST /auth/login` com senha errada | 401 Unauthorized | [cp3-02-login-senha-errada.png](Evidencias/cp3-02-login-senha-errada.png) |
+| 3 | `GET /auth/me` sem token | 401 Unauthorized (acesso negado) | [cp3-03-me-sem-token.png](Evidencias/cp3-03-me-sem-token.png) |
+| 4 | `GET /auth/me` com token válido | 200 OK | [cp3-04-me-com-token.png](Evidencias/cp3-04-me-com-token.png) |
 
 ### CP4 — regras de autorização por papel
 
-Cenário: Ana publica um serviço; Bruno é um USER comum sem relação com ele; Carla é ADMIN (promovida direto no
-banco — não existe endpoint público para virar ADMIN, de propósito).
+Cenário: **Ana** publica um serviço; **Bruno** é um USER comum sem relação com ele; **Carla** é promovida a ADMIN
+direto no banco (não existe endpoint público para virar ADMIN, de propósito — promoção de papel é uma operação
+administrativa fora da API pública).
 
-```
-1) Ana publica um serviço (autenticado pode publicar)               -> 201 Created
-2) Publicar SEM token                                                -> 401 Unauthorized
-3) Listar serviços SEM token (leitura é pública)                    -> 200 OK
-4) Bruno (não-dono) tenta EDITAR o serviço da Ana                    -> 403 Forbidden  [acesso negado por papel]
-5) Bruno (não-dono) tenta ENCERRAR o serviço da Ana                  -> 403 Forbidden  [acesso negado por papel]
-6) Ana (dona) edita o próprio serviço                                -> 200 OK
-7) Carla (ADMIN, não-dona) ENCERRA o serviço da Ana                  -> 200 OK   (exceção do ADMIN)
-8) Carla (ADMIN, não-dona) tenta EDITAR o serviço da Ana             -> 403 Forbidden  [ADMIN não tem exceção pra editar]
-9) Bruno tenta contratar o serviço da Ana já ENCERRADO               -> 409 Conflict
-10) Ana tenta contratar o PRÓPRIO serviço                            -> 409 Conflict
-11) Bruno contrata um serviço ATIVO da Ana                           -> 201 Created
-```
+| # | Teste | Esperado | Print |
+|---|-------|----------|-------|
+| 1 | Cadastro do Bruno | 201 Created | [cp4-01-cadastro-bruno.png](Evidencias/cp4-01-cadastro-bruno.png) |
+| 2 | Ana publica um serviço | 201 Created | [cp4-02-publicar-servico.png](Evidencias/cp4-02-publicar-servico.png) |
+| 3 | **Bruno (não-dono) tenta EDITAR o serviço da Ana** | **403 Forbidden — acesso negado por papel** | [cp4-03-editar-negado.png](Evidencias/cp4-03-editar-negado.png) |
+| 4 | **Bruno (não-dono) tenta ENCERRAR o serviço da Ana** | **403 Forbidden — acesso negado por papel** | [cp4-04-encerrar-negado.png](Evidencias/cp4-04-encerrar-negado.png) |
+| 5 | Bruno contrata o serviço (ativo) da Ana | 201 Created | [cp4-05-contratar-sucesso.png](Evidencias/cp4-05-contratar-sucesso.png) |
+| 6 | Ana tenta contratar o PRÓPRIO serviço | 409 Conflict | [cp4-06-auto-contratacao-negada.png](Evidencias/cp4-06-auto-contratacao-negada.png) |
+| 7 | Cadastro da Carla | 201 Created | [cp4-07-cadastro-carla.png](Evidencias/cp4-07-cadastro-carla.png) |
+| 8 | Carla promovida a ADMIN direto no banco | papel = ADMIN confirmado | [cp4-08-promover-admin.png](Evidencias/cp4-08-promover-admin.png) |
+| 9 | Carla (ADMIN, não-dona) ENCERRA o serviço da Ana | 200 OK — exceção do ADMIN | [cp4-09-admin-encerra-sucesso.png](Evidencias/cp4-09-admin-encerra-sucesso.png) |
+| 10 | Carla (ADMIN, não-dona) tenta EDITAR o serviço da Ana | **403 Forbidden — ADMIN não tem exceção pra editar** | [cp4-10-admin-edita-negado.png](Evidencias/cp4-10-admin-edita-negado.png) |
 
-O caso 4 (e o 5, e o 8) são os casos de **acesso negado por papel** exigidos na entrega: um USER sem relação com o
-serviço não pode alterá-lo, e mesmo um ADMIN — que tem uma exceção explícita para encerrar qualquer serviço — não
-tem essa mesma exceção para editar.
+Os testes 3, 4 e 10 são os casos de **acesso negado por papel** exigidos na entrega: um USER sem relação com o
+serviço não pode alterá-lo de forma alguma, e mesmo um ADMIN — que tem uma exceção explícita para encerrar qualquer
+serviço (teste 9) — não tem essa mesma exceção para editar (teste 10).
