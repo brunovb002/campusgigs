@@ -57,12 +57,28 @@ Resposta (`201 Created`):
 }
 ```
 
-### 2. Chamada autenticada (endpoint protegido)
-
-No CP2 a autenticação é feita via HTTP Basic (usuário/senha do cadastro). A partir do CP3, o login passa a emitir um token JWT, que substitui o HTTP Basic nas chamadas.
+### 2. Login (endpoint público) — obtém o token JWT
 
 ```bash
-curl -u ana@universidade.edu:senha123 http://localhost:8080/auth/me
+curl -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "ana@universidade.edu", "senha": "senha123"}'
+```
+
+Resposta (`200 OK`):
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9....",
+  "tipo": "Bearer",
+  "expiraEmMs": 3600000
+}
+```
+
+### 3. Chamada autenticada (endpoint protegido) — usando o token
+
+```bash
+curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...." http://localhost:8080/auth/me
 ```
 
 Resposta (`200 OK`):
@@ -79,17 +95,7 @@ Resposta (`200 OK`):
 }
 ```
 
-Sem credenciais, a mesma chamada retorna `401 Unauthorized`.
-
-## Checkpoints do projeto
-
-| CP | Descrição | Status |
-|----|-----------|--------|
-| CP1 | Docker sobe ambiente + primeira migration com schema inicial | ✅ |
-| CP2 | Cadastro e autenticação funcionando (senha protegida) | ✅ |
-| CP3 | Emissão e validação de token JWT nos endpoints protegidos | ⬜ |
-| CP4 | Regras de autorização por papel aplicadas | ⬜ |
-| CP5 | Integração HttpExchange com serviço externo de CEP + revisão final | ⬜ |
+Sem token, com token inválido/expirado, ou com senha errada no login, a API responde `401 Unauthorized`.
 
 ## Evidências de teste manual
 
@@ -107,5 +113,18 @@ Ver histórico de commits para a justificativa de cada checkpoint.
 ```
 
 Senha conferida diretamente no banco: armazenada como hash BCrypt (`$2a$10$...`), nunca em texto puro.
+
+### CP3 — emissão e validação de JWT
+
+```
+1) Cadastro (POST /auth/cadastro)                     -> 201 Created
+2) POST /auth/login com credenciais corretas           -> 200 OK + token JWT
+3) POST /auth/login com senha errada                   -> 401 Unauthorized
+4) POST /auth/login com email inexistente              -> 401 Unauthorized (mesma mensagem genérica)
+5) GET /auth/me com token válido                       -> 200 OK
+6) GET /auth/me sem token                              -> 401 Unauthorized (acesso negado)
+7) GET /auth/me com token adulterado                   -> 401 Unauthorized (acesso negado)
+8) GET /auth/me com header sem o prefixo "Bearer "     -> 401 Unauthorized (acesso negado)
+```
 
 Casos de acesso negado por papel (ADMIN vs. USER) serão documentados aqui a partir do CP4.
