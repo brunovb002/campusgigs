@@ -28,6 +28,6 @@ public class UsuarioController {
     public ResponseEntity<UsuarioResponse> atualizarCep(@Valid @RequestBody AtualizarCepRequest request,
                                                           Authentication authentication) {
         Usuario usuarioLogado = usuarioRepository.findByEmail(authentication.getName()).orElseThrow();
-        return ResponseEntity.ok(usuarioService.atualizarCep(usuarioLogado.getId(), request));
+        return ResponseEntity.ok(usuarioService.atualizarCep(usuarioLogado, request));
     }
 }

@@ -9,7 +9,6 @@ import com.campusgigs.model.Usuario;
 import com.campusgigs.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UsuarioService {
@@ -24,7 +23,10 @@ public class UsuarioService {
         this.cepService = cepService;
     }
 
-    @Transactional
+    // Sem @Transactional no método inteiro de propósito: a consulta ao ViaCEP é uma
+    // chamada de rede que pode demorar até o timeout configurado, e não queremos
+    // segurar uma conexão do pool do banco (Hikari) presa esperando um serviço externo
+    // responder. existsByEmail/save já são transacionais por conta própria (Spring Data).
     public UsuarioResponse cadastrar(CadastroRequest request) {
         if (usuarioRepository.existsByEmail(request.email())) {
             throw new EmailJaCadastradoException(request.email());
@@ -51,19 +53,18 @@ public class UsuarioService {
         return UsuarioResponse.from(usuario);
     }
 
-    // Atualiza o CEP (e cidade/uf derivados) de um usuário já cadastrado.
-    // Recebe o id, não a entidade, para garantir que o Usuario carregado aqui
-    // está gerenciado por esta transação (permite salvar por dirty checking).
-    @Transactional
-    public UsuarioResponse atualizarCep(Long usuarioId, AtualizarCepRequest request) {
-        Usuario usuario = usuarioRepository.findById(usuarioId).orElseThrow();
-
+    // Atualiza o CEP (e cidade/uf derivados) de um usuário já cadastrado. Recebe a
+    // entidade já carregada pelo controller (evita uma segunda consulta ao banco pelo
+    // mesmo id) e salva explicitamente no final — sem @Transactional, pelo mesmo
+    // motivo do cadastrar(): a chamada ao ViaCEP não deve segurar conexão do pool.
+    public UsuarioResponse atualizarCep(Usuario usuario, AtualizarCepRequest request) {
         EnderecoCep endereco = cepService.consultar(request.cep());
 
         usuario.setCep(request.cep());
         usuario.setCidade(endereco.cidade());
         usuario.setUf(endereco.uf());
 
+        usuario = usuarioRepository.save(usuario);
         return UsuarioResponse.from(usuario);
     }
 }
