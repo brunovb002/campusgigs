@@ -97,6 +97,24 @@ Resposta (`200 OK`):
 
 Sem token, com token inválido/expirado, ou com senha errada no login, a API responde `401 Unauthorized`.
 
+### 4. Publicar e contratar um serviço
+
+```bash
+# Publicar (qualquer autenticado)
+curl -X POST http://localhost:8080/servicos \
+  -H "Content-Type: application/json" -H "Authorization: Bearer <token>" \
+  -d '{"titulo": "Aula de Cálculo", "descricao": "Reforço para cálculo 1", "categoria": "Aulas", "preco": 50.00}'
+
+# Listar (público, sem token)
+curl http://localhost:8080/servicos
+
+# Contratar (autenticado, exceto o próprio dono do serviço)
+curl -X POST http://localhost:8080/servicos/1/contratar -H "Authorization: Bearer <token-de-outro-usuario>"
+
+# Encerrar (só o dono, ou um ADMIN)
+curl -X POST http://localhost:8080/servicos/1/encerrar -H "Authorization: Bearer <token>"
+```
+
 ## Evidências de teste manual
 
 Ver histórico de commits para a justificativa de cada checkpoint.
@@ -127,4 +145,25 @@ Senha conferida diretamente no banco: armazenada como hash BCrypt (`$2a$10$...`)
 8) GET /auth/me com header sem o prefixo "Bearer "     -> 401 Unauthorized (acesso negado)
 ```
 
-Casos de acesso negado por papel (ADMIN vs. USER) serão documentados aqui a partir do CP4.
+### CP4 — regras de autorização por papel
+
+Cenário: Ana publica um serviço; Bruno é um USER comum sem relação com ele; Carla é ADMIN (promovida direto no
+banco — não existe endpoint público para virar ADMIN, de propósito).
+
+```
+1) Ana publica um serviço (autenticado pode publicar)               -> 201 Created
+2) Publicar SEM token                                                -> 401 Unauthorized
+3) Listar serviços SEM token (leitura é pública)                    -> 200 OK
+4) Bruno (não-dono) tenta EDITAR o serviço da Ana                    -> 403 Forbidden  [acesso negado por papel]
+5) Bruno (não-dono) tenta ENCERRAR o serviço da Ana                  -> 403 Forbidden  [acesso negado por papel]
+6) Ana (dona) edita o próprio serviço                                -> 200 OK
+7) Carla (ADMIN, não-dona) ENCERRA o serviço da Ana                  -> 200 OK   (exceção do ADMIN)
+8) Carla (ADMIN, não-dona) tenta EDITAR o serviço da Ana             -> 403 Forbidden  [ADMIN não tem exceção pra editar]
+9) Bruno tenta contratar o serviço da Ana já ENCERRADO               -> 409 Conflict
+10) Ana tenta contratar o PRÓPRIO serviço                            -> 409 Conflict
+11) Bruno contrata um serviço ATIVO da Ana                           -> 201 Created
+```
+
+O caso 4 (e o 5, e o 8) são os casos de **acesso negado por papel** exigidos na entrega: um USER sem relação com o
+serviço não pode alterá-lo, e mesmo um ADMIN — que tem uma exceção explícita para encerrar qualquer serviço — não
+tem essa mesma exceção para editar.

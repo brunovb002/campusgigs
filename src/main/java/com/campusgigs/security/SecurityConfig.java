@@ -2,6 +2,7 @@ package com.campusgigs.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -53,6 +54,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("POST", "/auth/cadastro").permitAll()
                         .requestMatchers("POST", "/auth/login").permitAll()
+                        // Listar/ver serviços é leitura pública; só operação que altera dado exige token.
+                        .requestMatchers(HttpMethod.GET, "/servicos/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(handling -> handling

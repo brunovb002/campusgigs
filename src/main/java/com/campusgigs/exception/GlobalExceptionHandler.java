@@ -27,6 +27,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(corpoErro(HttpStatus.CONFLICT, ex.getMessage()));
     }
 
+    @ExceptionHandler(ServicoNaoEncontradoException.class)
+    public ResponseEntity<Map<String, Object>> handleServicoNaoEncontrado(ServicoNaoEncontradoException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(corpoErro(HttpStatus.NOT_FOUND, ex.getMessage()));
+    }
+
+    // Autorização decidida na regra de negócio (ex.: "só o dono edita") — 403,
+    // mesmo formato do RestAccessDeniedHandler usado nas negações do Spring Security.
+    @ExceptionHandler(AcessoNegadoException.class)
+    public ResponseEntity<Map<String, Object>> handleAcessoNegado(AcessoNegadoException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(corpoErro(HttpStatus.FORBIDDEN, ex.getMessage()));
+    }
+
+    @ExceptionHandler(ContratacaoInvalidaException.class)
+    public ResponseEntity<Map<String, Object>> handleContratacaoInvalida(ContratacaoInvalidaException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(corpoErro(HttpStatus.CONFLICT, ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidacao(MethodArgumentNotValidException ex) {
         Map<String, String> campos = new LinkedHashMap<>();
